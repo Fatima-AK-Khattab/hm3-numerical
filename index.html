@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google" content="notranslate">
-    <title>واجب التحليلات العددية - جامعة تكريت</title>
+    <title>Numerical Analysis Homework</title>
     
-    <!-- مكتبات برمجية مستقرة -->
+    <!-- تحميل المكتبات بروابط مستقرة جداً -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -17,51 +17,47 @@
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
         body { 
             font-family: 'Tajawal', sans-serif; 
-            background-color: #f1f5f9;
-            margin: 0;
-            -webkit-font-smoothing: antialiased;
+            background-color: #f8fafc;
+            user-select: none;
         }
-        .math-text { font-family: 'Times New Roman', serif; font-style: italic; font-size: 1.3rem; }
-        .ltr-dir { direction: ltr; text-align: left; }
-        .no-spinners::-webkit-outer-spin-button,
-        .no-spinners::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .fade-in { animation: fadeIn 0.4s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .math-font { font-family: 'Times New Roman', Times, serif; font-style: italic; }
+        .ltr { direction: ltr; text-align: left; }
+        .no-translate { translate: no; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
-<body>
+<body class="notranslate" translate="no">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // مكوّن الأيقونة المستقر
-        const Icon = ({ name, className = "" }) => {
+        // مكوّن أيقونات ثابت
+        const LucideIcon = ({ name, className = "" }) => {
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
-            return <i data-lucide={name} className={className} style={{width:'1.2em', height:'1.2em'}}></i>;
+            return <i data-lucide={name} className={className}></i>;
         };
 
-        // --- محرك الحسابات (للتصحيح التلقائي) ---
-        const f1 = (x) => Math.sqrt(x + 1);
-        const f3 = (x) => Math.sqrt(1 + x);
-
-        const solve = {
+        // محرك الحسابات (للتصحيح التلقائي)
+        const solveMath = {
+            f1: (x) => Math.sqrt(x + 1),
+            f3: (x) => Math.sqrt(1 + x),
             trap: (a, b, n) => {
                 const h = (b - a) / n;
-                let s = f1(a) + f1(b);
-                for (let i = 1; i < n; i++) s += 2 * f1(a + i * h);
+                let s = solveMath.f1(a) + solveMath.f1(b);
+                for (let i = 1; i < n; i++) s += 2 * solveMath.f1(a + i * h);
                 return (h / 2) * s;
             },
             simp: (a, b, n) => {
                 const h = (b - a) / n;
-                let s = f1(a) + f1(b);
-                for (let i = 1; i < n; i++) s += (i % 2 === 0 ? 2 : 4) * f1(a + i * h);
+                let s = solveMath.f1(a) + solveMath.f1(b);
+                for (let i = 1; i < n; i++) s += (i % 2 === 0 ? 2 : 4) * solveMath.f1(a + i * h);
                 return (h / 3) * s;
             },
             gauss3: (a, b) => {
-                const n = [-0.774596, 0, 0.774596], w = [0.555555, 0.888888, 0.555555];
+                const nodes = [-0.7745966692, 0, 0.7745966692], weights = [0.5555555556, 0.8888888889, 0.5555555556];
                 let s = 0; const tr = (t) => ((b - a) / 2) * t + (b + a) / 2;
-                for (let i = 0; i < 3; i++) s += w[i] * f1(tr(n[i]));
+                for (let i = 0; i < 3; i++) s += weights[i] * solveMath.f1(tr(nodes[i]));
                 return ((b - a) / 2) * s;
             },
             simpTable: (h, y) => {
@@ -70,250 +66,230 @@
                 return (h / 3) * s;
             },
             gauss4: (a, b) => {
-                const n = [-0.861136, -0.339981, 0.339981, 0.861136], w = [0.347855, 0.652145, 0.652145, 0.347855];
+                const nodes = [-0.861136, -0.339981, 0.339981, 0.861136], weights = [0.347855, 0.652145, 0.652145, 0.347855];
                 let s = 0; const tr = (t) => ((b - a) / 2) * t + (b + a) / 2;
-                for (let i = 0; i < 4; i++) s += w[i] * f3(tr(n[i]));
+                for (let i = 0; i < 4; i++) s += weights[i] * solveMath.f3(tr(nodes[i]));
                 return ((b - a) / 2) * s;
             }
         };
 
         function App() {
             const [step, setStep] = useState(0);
-            const [studentInfo, setStudentInfo] = useState({ name: '', studyType: '' });
-            const [answers, setAnswers] = useState({ q1a: '', q1b: '', q1c: '', q2: '', q3: '' });
-            const [pdfFile, setPdfFile] = useState(null);
-            const [isSubmitted, setIsSubmitted] = useState(false);
+            const [student, setStudent] = useState({ name: '', type: '' });
+            const [ans, setAns] = useState({ q1a: '', q1b: '', q1c: '', q2: '', q3: '' });
+            const [pdf, setPdf] = useState(null);
+            const [isDone, setIsDone] = useState(false);
             const [loading, setLoading] = useState(false);
-            const [data, setData] = useState(null);
+            const [qData, setQData] = useState(null);
 
-            // توليد بيانات ثابتة لكل طالب
+            // توليد بيانات الأسئلة مرة واحدة فقط لكل طالب
             useEffect(() => {
-                const saved = localStorage.getItem('hw3_vfinal_stable');
+                const saved = localStorage.getItem('NA_HW3_DATA_STABLE');
                 if (saved) {
-                    setData(JSON.parse(saved));
+                    setQData(JSON.parse(saved));
                 } else {
-                    const a1 = Math.floor(Math.random() * 4) + 2; // 2-5
-                    const a3 = Math.floor(Math.random() * 3) + 2; // 2-4
-                    const x2_start = Math.floor(Math.random() * 5);
-                    const y2 = Array.from({length: 7}, () => parseFloat((Math.random() * 15 + 2).toFixed(1)));
-                    const newData = { a1, b1: a1+4, a3, b3: a3+6, x2: Array.from({length: 7}, (_,i)=>x2_start+(i*3)), y2, h2: 3 };
-                    localStorage.setItem('hw3_vfinal_stable', JSON.stringify(newData));
-                    setData(newData);
+                    const a1 = Math.floor(Math.random() * 3) + 2; 
+                    const a3 = Math.floor(Math.random() * 3) + 2;
+                    const xStart = Math.floor(Math.random() * 5);
+                    const yVal = Array.from({length: 7}, () => parseFloat((Math.random() * 15 + 2).toFixed(1)));
+                    const data = { a1, b1: a1+4, a3, b3: a3+6, x2: Array.from({length: 7}, (_, i) => xStart + (i*3)), y2: yVal, h2: 3 };
+                    localStorage.setItem('NA_HW3_DATA_STABLE', JSON.stringify(data));
+                    setQData(data);
                 }
             }, []);
 
-            // التحقق من ملئ الخانات قبل الانتقال
-            const isStepValid = () => {
-                if (step === 0) return studentInfo.name.trim().length > 5 && studentInfo.studyType !== '';
-                if (step === 1) return answers.q1a !== '';
-                if (step === 2) return answers.q1b !== '';
-                if (step === 3) return answers.q1c !== '';
-                if (step === 4) return answers.q2 !== '';
-                if (step === 5) return answers.q3 !== '';
-                if (step === 6) return pdfFile !== null;
+            // التحقق من صحة الخطوة الحالية
+            const isValid = () => {
+                if (step === 0) return student.name.trim().length > 7 && student.type !== '';
+                if (step === 1) return ans.q1a !== '';
+                if (step === 2) return ans.q1b !== '';
+                if (step === 3) return ans.q1c !== '';
+                if (step === 4) return ans.q2 !== '';
+                if (step === 5) return ans.q3 !== '';
+                if (step === 6) return pdf !== null;
                 return true;
             };
 
-            const calculateGrades = () => {
-                const c1a = solve.trap(data.a1, data.b1, 4);
-                const c1b = solve.simp(data.a1, data.b1, 4);
-                const c1c = solve.gauss3(data.a1, data.b1);
-                const c2 = solve.simpTable(data.h2, data.y2);
-                const c3 = solve.gauss4(data.a3, data.b3);
-
-                const chk1 = (s, c) => {
+            const getGrades = () => {
+                const c = {
+                    q1a: solveMath.trap(qData.a1, qData.b1, 4),
+                    q1b: solveMath.simp(qData.a1, qData.b1, 4),
+                    q1c: solveMath.gauss3(qData.a1, qData.b1),
+                    q2: solveMath.simpTable(qData.h2, qData.y2),
+                    q3: solveMath.gauss4(qData.a3, qData.b3)
+                };
+                const calc = (s, cor, max) => {
                     const v = parseFloat(s); if (isNaN(v)) return 0.5;
-                    if (Math.abs(v - c) < 0.05) return 1.5;
-                    if (Math.abs(Math.abs(v) - Math.abs(c)) < 0.05) return 1.0;
+                    if (Math.abs(v - cor) < 0.05) return max;
+                    if (Math.abs(Math.abs(v) - Math.abs(cor)) < 0.05) return max - 0.5;
                     return 0.5;
                 };
-
-                const chk2 = (s, c) => {
-                    const v = parseFloat(s); if (isNaN(v)) return 1.0;
-                    if (Math.abs(v - c) < 0.05) return 2.5;
-                    if (Math.abs(Math.abs(v) - Math.abs(c)) < 0.05) return 2.0;
-                    if (Math.abs(v - c) < 0.5) return 1.5;
-                    return 1.0;
-                };
-
-                const chk3 = (s, c) => {
-                    const v = parseFloat(s); if (isNaN(v)) return 1.0;
-                    if (v.toFixed(2) === c.toFixed(2)) return 3.0;
-                    if (Math.abs(Math.abs(v) - Math.abs(c)) < 0.05) return 2.5;
-                    if (Math.abs(v - c) < 0.5) return 2.0;
-                    return 1.0;
-                };
-
-                const g1a = chk1(answers.q1a, c1a);
-                const g1b = chk1(answers.q1b, c1b);
-                const g1c = chk1(answers.q1c, c1c);
-                const g2 = chk2(answers.q2, c2);
-                const g3 = chk3(answers.q3, c3);
-
+                const g1a = calc(ans.q1a, c.q1a, 1.5);
+                const g1b = calc(ans.q1b, c.q1b, 1.5);
+                const g1c = calc(ans.q1c, c.q1c, 1.5);
+                const g2 = calc(ans.q2, c.q2, 2.5);
+                const g3 = calc(ans.q3, c.q3, 3.0);
                 return { g1a, g1b, g1c, g2, g3, total: (g1a+g1b+g1c+g2+g3).toFixed(2) };
             };
 
-            const handleSubmit = async () => {
+            const submitHW = async () => {
                 setLoading(true);
                 const reader = new FileReader();
-                reader.readAsDataURL(pdfFile);
+                reader.readAsDataURL(pdf);
                 reader.onload = async () => {
                     const base64 = reader.result.split(',')[1];
                     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYfd1GjJU2431aFoE4-1R7KW1aV0B8urtocmTs774j8uCINExl5iK65k_tjYa14Oc8Kg/exec"; 
-                    const payload = { ...studentInfo, ...answers, ...calculateGrades(), pdfData: base64, pdfName: pdfFile.name, date: new Date().toLocaleString('ar-EG') };
+                    const payload = { ...student, ...ans, ...getGrades(), pdfData: base64, date: new Date().toLocaleString('ar-EG') };
                     try {
                         await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                        setIsSubmitted(true);
-                    } catch (e) { setIsSubmitted(true); }
+                        setIsDone(true);
+                    } catch (e) { setIsDone(true); }
                     setLoading(false);
                 };
             };
 
-            if (isSubmitted) {
+            if (isDone) {
                 return (
-                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-100">
-                        <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-green-500 fade-in">
-                            <Icon name="check-circle" className="text-green-500 w-20 h-20 mx-auto mb-4" />
-                            <h1 className="text-2xl font-black text-slate-800 mb-2">تم التسليم بنجاح!</h1>
-                            <p className="text-slate-600 mb-8">لقد قمت بتسليم بنجاح ستظهر اجاباتك عند الاستاذ</p>
-                            <button onClick={() => setIsSubmitted(false)} className="text-blue-600 font-bold hover:underline">تعديل الإجابة النهائية</button>
+                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+                        <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-green-500 animate-pulse">
+                            <LucideIcon name="check-circle" className="text-green-500 w-20 h-20 mx-auto mb-4" />
+                            <h1 className="text-2xl font-black text-slate-800">لقد قمت بتسليم بنجاح</h1>
+                            <p className="text-slate-600 mt-2">ستظهر اجاباتك عند الاستاذ</p>
+                            <button onClick={() => setIsDone(false)} className="mt-6 text-blue-600 font-bold hover:underline">العودة لتعديل الاجابة النهائية</button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="min-h-screen flex flex-col items-center py-8 px-4">
-                    {/* ترويسة الجامعة مطابقة للملف */}
-                    <div className="w-full max-w-3xl bg-white p-6 rounded-t-[2rem] shadow-sm border-b-2 border-slate-100 text-center relative overflow-hidden">
-                        <div className="relative z-10">
-                            <h1 className="font-bold text-slate-800 text-lg">Civil Engineering Department - Tikrit University</h1>
-                            <p className="text-slate-500 text-sm font-medium">Numerical Analysis / Second Semester / 2025-2026</p>
-                            <div className="mt-2 inline-block px-4 py-1 bg-slate-800 text-white text-xs rounded-full font-bold">Home Work No. (3)</div>
-                        </div>
-                        <div className="absolute top-0 right-0 p-4 opacity-10"><Icon name="university" className="w-16 h-16" /></div>
+                <div className="min-h-screen flex flex-col items-center py-6 px-4 bg-slate-100">
+                    {/* ترويسة ثابتة - لا تترجم */}
+                    <div className="w-full max-w-2xl bg-white p-6 rounded-t-3xl shadow-sm border-b-2 border-slate-100 text-center notranslate">
+                        <h2 className="font-black text-slate-800 text-lg">Civil Engineering Department - Tikrit University</h2>
+                        <p className="text-slate-500 text-sm font-bold">Numerical Analysis / Second Semester / 2025-2026</p>
+                        <div className="mt-2 inline-block px-4 py-1 bg-blue-600 text-white text-xs rounded-full font-bold uppercase">Home Work No. (3)</div>
                     </div>
 
-                    <div className="w-full max-w-3xl bg-white rounded-b-[2rem] shadow-xl overflow-hidden flex flex-col min-h-[500px]">
+                    <div className="w-full max-w-2xl bg-white rounded-b-3xl shadow-xl overflow-hidden flex flex-col min-h-[550px]">
                         {/* Progress Bar */}
                         <div className="w-full bg-slate-100 h-1.5 flex">
                             {[...Array(7)].map((_, i) => (
-                                <div key={i} className={`flex-1 transition-all duration-500 ${i <= step ? 'bg-blue-600' : ''}`} />
+                                <div key={i} className={`flex-1 transition-all duration-700 ${i <= step ? 'bg-blue-600' : ''}`} />
                             ))}
                         </div>
 
-                        <div className="p-8 md:p-12 flex-grow">
+                        <div className="p-8 flex-grow" key={`step-${step}`}>
                             {step === 0 && (
-                                <div className="space-y-8 fade-in">
-                                    <div className="text-center">
-                                        <h2 className="text-2xl font-black text-slate-800 mb-2">بيانات الطالب</h2>
-                                        <p className="text-slate-400 text-sm">يرجى ملئ الخانات للبدء بالواجب</p>
-                                    </div>
+                                <div className="space-y-6">
+                                    <h3 className="text-xl font-black text-center text-slate-800 mb-8 underline underline-offset-8 decoration-blue-300">معلومات الطالب</h3>
                                     <div className="space-y-4">
                                         <div className="space-y-1">
-                                            <label className="text-sm font-bold text-slate-600 mr-2">الاسم الثلاثي باللغة العربية</label>
-                                            <input type="text" placeholder="أدخل اسمك الكامل هنا..." className="w-full p-4 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-500 transition-all font-bold" value={studentInfo.name} onChange={e => setStudentInfo({...studentInfo, name: e.target.value})} />
+                                            <span className="text-xs font-bold text-slate-500 mr-2">الاسم الثلاثي باللغة العربية</span>
+                                            <input type="text" placeholder="اكتب اسمك الكامل هنا..." className="w-full p-4 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-500 transition-all font-bold" value={student.name} onChange={e => setStudent({...student, name: e.target.value})} />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-sm font-bold text-slate-600 mr-2">نوع الدراسة</label>
-                                            <select className="w-full p-4 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-500 transition-all font-bold" value={studentInfo.studyType} onChange={e => setStudentInfo({...studentInfo, studyType: e.target.value})}>
-                                                <option value="">-- اختر نوع الدراسة --</option>
+                                            <span className="text-xs font-bold text-slate-500 mr-2">نوع الدراسة</span>
+                                            <select className="w-full p-4 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-500 transition-all font-bold appearance-none bg-white" value={student.type} onChange={e => setStudent({...student, type: e.target.value})}>
+                                                <option value="">-- اختر من القائمة --</option>
                                                 <option>صباحي A</option><option>صباحي B</option><option>صباحي C</option><option>فصلي</option><option>مسائي</option>
                                             </select>
                                         </div>
                                     </div>
-                                    <div className="bg-amber-50 p-4 rounded-2xl border-r-8 border-amber-400 text-sm text-amber-900 font-bold leading-relaxed">
+                                    <div className="bg-amber-50 p-4 rounded-2xl border-r-4 border-amber-400 text-xs text-amber-900 font-bold leading-relaxed">
                                         قم بكتابة اسمك على جميع صفحات الحل اليدوي قبل ارساله.
                                     </div>
                                 </div>
                             )}
 
-                            {data && step >= 1 && step <= 5 && (
-                                <div key={step} className="space-y-8 fade-in">
-                                    <div className="flex justify-between items-center border-b pb-4">
-                                        <h3 className="text-xl font-black text-slate-800">Q{step <= 3 ? '1' : step === 4 ? '2' : '3'}: Evaluate</h3>
-                                        <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-3 py-1 rounded-full uppercase tracking-tighter">Step {step} of 7</span>
+                            {qData && step >= 1 && step <= 3 && (
+                                <div className="space-y-6">
+                                    <h3 className="text-lg font-black text-slate-800 border-b pb-2">Q1: Evaluate</h3>
+                                    <div className="bg-slate-50 p-6 rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-4">
+                                        <div className="math-font text-2xl ltr">
+                                            ∫<sub className="text-xs">{qData.a1}</sub><sup>{qData.b1}</sup> √(x+1) dx
+                                        </div>
+                                        <p className="text-sm font-bold text-slate-500">
+                                            using: <span className="text-blue-700">{step === 1 ? 'a.) Trapezoidal Method (n=4)' : step === 2 ? "b.) Simpson's Rule (n=4)" : 'c.) Gauss-Quadrature (n=3)'}</span>
+                                        </p>
                                     </div>
-
-                                    <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 relative">
-                                        {step <= 3 && (
-                                            <div className="text-center space-y-4">
-                                                <div className="math-text ltr-dir">
-                                                    ∫<sub className="text-xs">{data.a1}</sub><sup>{data.b1}</sup> √(x+1) dx
-                                                </div>
-                                                <p className="text-sm font-bold text-slate-500">
-                                                    using: <span className="text-blue-600">{step === 1 ? 'Trapezoidal Method (n=4)' : step === 2 ? "Simpson's Rule (n=4)" : 'Gauss-Quadrature (n=3)'}</span>
-                                                </p>
-                                            </div>
-                                        )}
-                                        {step === 4 && (
-                                            <div className="space-y-4">
-                                                <p className="text-sm font-bold text-slate-700">Find the area enclosed by the following points using: <span className="text-blue-600">Simpson's Rule</span></p>
-                                                <div className="overflow-x-auto rounded-xl shadow-sm border">
-                                                    <table className="w-full text-center ltr-dir text-sm">
-                                                        <tr className="bg-slate-100 font-black"><td className="border p-2">X</td>{data.x2.map(v => <td key={v} className="border p-2">{v}</td>)}</tr>
-                                                        <tr><td className="border p-2 font-black italic">f(x)</td>{data.y2.map((v, i) => <td key={i} className="border p-2">{v}</td>)}</tr>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {step === 5 && (
-                                            <div className="text-center space-y-4">
-                                                <div className="math-text ltr-dir">
-                                                    ∫<sub className="text-xs">{data.a3}</sub><sup>{data.b3}</sup> √(1+x) dx
-                                                </div>
-                                                <p className="text-sm font-bold text-slate-500">using <span className="text-blue-600">Gauss-Quadrature formula (n=4)</span></p>
-                                            </div>
-                                        )}
-                                    </div>
-
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold text-slate-600 mr-2">أدخل النتيجة النهائية (رقم):</label>
-                                        <input 
-                                            type="number" step="any" placeholder="0.0000" 
-                                            className="w-full p-5 border-2 border-slate-100 rounded-[1.5rem] ltr-dir text-2xl font-mono no-spinners focus:border-blue-500 outline-none transition-all shadow-inner bg-slate-50/50" 
-                                            value={step === 1 ? answers.q1a : step === 2 ? answers.q1b : step === 3 ? answers.q1c : step === 4 ? answers.q2 : answers.q3}
-                                            onChange={e => setAnswers({...answers, [step === 1 ? 'q1a' : step === 2 ? 'q1b' : step === 3 ? 'q1c' : step === 4 ? 'q2' : 'q3']: e.target.value})} 
-                                        />
+                                        <span className="text-xs font-bold text-slate-500 mr-2">النتيجة النهائية المحسوبة:</span>
+                                        <input type="number" step="any" placeholder="0.0000" className="w-full p-4 border-2 border-slate-100 rounded-2xl ltr font-mono text-xl focus:border-blue-500 outline-none transition-all shadow-inner" 
+                                            value={step === 1 ? ans.q1a : step === 2 ? ans.q1b : ans.q1c}
+                                            onChange={e => setAns({...ans, [step === 1 ? 'q1a' : step === 2 ? 'q1b' : 'q1c']: e.target.value})} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {qData && step === 4 && (
+                                <div className="space-y-6">
+                                    <h3 className="text-lg font-black text-slate-800 border-b pb-2">Q2: Find the area enclosed</h3>
+                                    <p className="text-sm font-bold text-slate-600">Find the area enclosed by the following points using: <span className="text-blue-600 underline">Simpson's Rule</span></p>
+                                    <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                                        <table className="w-full text-center text-xs ltr">
+                                            <tr className="bg-slate-50 font-black"><td className="border p-2">X</td>{qData.x2.map(v => <td key={v} className="border p-2">{v}</td>)}</tr>
+                                            <tr><td className="border p-2 font-black italic italic">f(x)</td>{qData.y2.map((v, i) => <td key={i} className="border p-2">{v}</td>)}</tr>
+                                        </table>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <span className="text-xs font-bold text-slate-500 mr-2">المساحة النهائية:</span>
+                                        <input type="number" step="any" placeholder="0.00" className="w-full p-4 border-2 border-slate-100 rounded-2xl ltr font-mono text-xl focus:border-blue-500 outline-none" 
+                                            value={ans.q2} onChange={e => setAns({...ans, q2: e.target.value})} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {qData && step === 5 && (
+                                <div className="space-y-6">
+                                    <h3 className="text-lg font-black text-slate-800 border-b pb-2">Q3: Evaluate</h3>
+                                    <div className="bg-slate-50 p-6 rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-4">
+                                        <div className="math-font text-2xl ltr">
+                                            ∫<sub className="text-xs">{qData.a3}</sub><sup>{qData.b3}</sup> √(1+x) dx
+                                        </div>
+                                        <p className="text-sm font-bold text-slate-500">using <span className="text-blue-700">Gauss-Quadrature formula (n=4)</span></p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <span className="text-xs font-bold text-slate-500 mr-2">النتيجة النهائية:</span>
+                                        <input type="number" step="any" placeholder="0.00" className="w-full p-4 border-2 border-slate-100 rounded-2xl ltr font-mono text-xl focus:border-blue-500 outline-none" 
+                                            value={ans.q3} onChange={e => setAns({...ans, q3: e.target.value})} />
                                     </div>
                                 </div>
                             )}
 
                             {step === 6 && (
-                                <div className="space-y-8 fade-in text-center">
-                                    <h3 className="text-2xl font-black text-slate-800">المرحلة النهائية: إرفاق الحل</h3>
-                                    <div className={`group relative border-4 border-dashed p-12 rounded-[3rem] transition-all cursor-pointer ${pdfFile ? 'border-green-400 bg-green-50' : 'border-slate-200 bg-slate-50 hover:border-blue-400 hover:bg-blue-50'}`}>
-                                        <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={e => setPdfFile(e.target.files[0])} />
-                                        {pdfFile ? (
+                                <div className="space-y-8 text-center">
+                                    <h3 className="text-xl font-black text-slate-800">إرفاق ملف الحل اليدوي</h3>
+                                    <div className={`relative border-4 border-dashed p-10 rounded-[2.5rem] transition-all cursor-pointer ${pdf ? 'border-green-400 bg-green-50' : 'border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300'}`}>
+                                        <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer z-20" onChange={e => setPdf(e.target.files[0])} />
+                                        {pdf ? (
                                             <div className="flex flex-col items-center gap-2">
-                                                <Icon name="file-text" className="w-16 h-16 text-green-500" />
-                                                <p className="font-bold text-green-900">{pdfFile.name}</p>
-                                                <span className="text-xs text-green-600">{(pdfFile.size/1024/1024).toFixed(2)} MB</span>
+                                                <LucideIcon name="file-check" className="w-16 h-16 text-green-500" />
+                                                <span className="font-bold text-green-900">{pdf.name}</span>
                                             </div>
                                         ) : (
-                                            <div className="flex flex-col items-center gap-2 text-slate-400 group-hover:text-blue-500">
-                                                <Icon name="upload-cloud" className="w-16 h-16" />
-                                                <p className="font-bold">اضغط لرفع ملف PDF واحد لجميع الحلول</p>
-                                                <p className="text-[10px]">على ان لا يتجاوز حجم الملف ٨ ميكابايت</p>
+                                            <div className="flex flex-col items-center gap-2 text-slate-400">
+                                                <LucideIcon name="upload-cloud" className="w-16 h-16" />
+                                                <span className="font-bold">اضغط هنا لرفع ملف PDF واحد لجميع الحلول</span>
                                             </div>
                                         )}
                                     </div>
+                                    <div className="bg-blue-50 p-4 rounded-2xl text-[10px] text-blue-800 font-bold text-center">ارفق ملف واحد فقط بصيغة pdf لجميع الحلول على ان لا يتجاوز حجم الملف ٨ ميكابايت</div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Footer Navigation */}
+                        {/* Navigation Footer */}
                         <div className="p-8 bg-slate-50 border-t flex justify-between gap-4">
                             {step > 0 && (
-                                <button onClick={() => setStep(step - 1)} className="px-8 py-4 bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 active:scale-95 transition-all">السابق</button>
+                                <button onClick={() => setStep(step - 1)} className="px-6 py-4 border-2 border-slate-200 bg-white rounded-2xl font-black text-slate-500 hover:bg-slate-100 transition-all active:scale-95">السابق</button>
                             )}
                             <button 
-                                disabled={loading || !isStepValid()}
-                                onClick={step === 6 ? handleSubmit : () => setStep(step + 1)}
-                                className={`flex-grow px-8 py-4 rounded-2xl text-white font-black shadow-lg shadow-blue-200 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed ${step === 6 ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'bg-blue-700 hover:bg-blue-800'}`}
+                                disabled={loading || !isValid()}
+                                onClick={step === 6 ? submitHW : () => setStep(step + 1)}
+                                className={`flex-grow px-8 py-4 rounded-2xl text-white font-black shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed ${step === 6 ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-700 hover:bg-blue-800'}`}
                             >
                                 {loading ? 'جاري الإرسال...' : (step === 6 ? 'إرسال الواجب النهائي' : 'الانتقال للسؤال التالي')}
-                                {step < 6 && <Icon name="chevron-left" className="w-5 h-5 rotate-180" />}
+                                {step < 6 && <LucideIcon name="chevron-left" className="w-5 h-5 rotate-180" />}
                             </button>
                         </div>
                     </div>
