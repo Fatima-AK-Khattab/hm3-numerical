@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جامعة تكريت - واجب التحليلات العددية HW3</title>
+    <title>جامعة تكريت - نظام الواجبات</title>
     
-    <!-- استيراد المكتبات الأساسية -->
+    <!-- استيراد المكتبات -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     
-    <!-- إعداد مكتبة المعادلات الرياضية -->
+    <!-- MathJax لإظهار المعادلات الرياضية -->
     <script>
         window.MathJax = {
             tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
@@ -22,10 +22,11 @@
     <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #f1f5f9; }
-        .main-card { background: white; border-radius: 2.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); }
+        body { font-family: 'Cairo', sans-serif; background-color: #f3f4f6; }
+        .assignment-card { background: white; border-radius: 2.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); }
         .no-select { user-select: none; }
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+        .math-display { font-size: 1.6rem; margin: 2rem 0; color: #1e3a8a; text-align: center; }
     </style>
 </head>
 <body>
@@ -34,8 +35,8 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // --- ضعي رابط الـ Web App الخاص بكِ هنا ---
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzbditXBBW6q0j-p1vZVII0ntvYV2N5xLnkVtUgrKMdOqoLd65WedNbMgjytlXNERlsqQ/exec";
+        // --- ضعي رابط Web App URL الخاص بكِ هنا من الـ Canvas Script ---
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw97nfKM1mPTfTUDNMrlI1Uvsfx82U33f7eESInXFks83QzMzeT2xguBRELwe3kUAN_0w/exec";
 
         function App() {
             const [step, setStep] = useState('register');
@@ -43,28 +44,47 @@
             const [ans, setAns] = useState({});
             const [pdfBase64, setPdfBase64] = useState(null);
             const [loading, setLoading] = useState(false);
-            const [studentGrade, setStudentGrade] = useState(null);
+            const [isReturning, setIsReturning] = useState(false);
 
-            // تحديث المعادلات عند كل انتقال
+            // استعادة البيانات السابقة إذا كان الطالب قد حل مسبقاً من نفس الجهاز
+            useEffect(() => {
+                const saved = localStorage.getItem('tikrit_hw3_cache_v3');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    setStudentInfo(parsed.studentInfo);
+                    setAns(parsed.ans);
+                    setIsReturning(true);
+                }
+            }, []);
+
+            // تحديث MathJax لرسم المعادلات عند تغيير الخطوات
             useEffect(() => {
                 if (window.MathJax && window.MathJax.typesetPromise) {
                     window.MathJax.typesetPromise();
                 }
             }, [step, studentInfo.name]);
 
-            // توليد أرقام ثابتة لكل طالب بناءً على اسمه
+            // عشوائية ذكية بناءً على "بصمة الاسم" لضمان ثبات الأسئلة لنفس الطالب
             const assignment = useMemo(() => {
                 if (!studentInfo.name || studentInfo.name.trim().length < 5) return null;
-                const seed = studentInfo.name.split("").reduce((a, b) => a + b.charCodeAt(0), 0);
-                const getRnd = (min, max, off) => (min + ((Math.abs(Math.sin(seed + off)) * 10000) % 1) * (max - min));
                 
+                // دالة لتبسيط الاسم وتوليد Seed (مطابقة للمنطق في Canvas)
+                const fingerprint = studentInfo.name.replace(/[^ا-ي]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي");
+                const seed = fingerprint.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                
+                const getRnd = (min, max, offset) => {
+                    const r = (Math.abs(Math.sin(seed + offset)) * 10000) % 1;
+                    return (min + r * (max - min));
+                };
+
                 return {
-                    q1: { a: Math.floor(getRnd(1, 4, 5)), b: Math.floor(getRnd(5, 8, 15)) },
-                    q2: { h: Math.floor(getRnd(1, 3, 25)) + 1, y: [0,1,2,3,4,5,6,7,8].map((x, i) => parseFloat(getRnd(6, 22, i + 50).toFixed(2))) },
+                    q1: { a: Math.floor(getRnd(1, 3, 5)), b: Math.floor(getRnd(5, 8, 15)) },
+                    q2: { h: Math.floor(getRnd(1, 3, 25)) + 1, y: [0,1,2,3,4,5,6,7,8].map((_, i) => parseFloat(getRnd(5, 25, i + 50).toFixed(2))) },
                     q3: { a: Math.floor(getRnd(1, 4, 35)), b: Math.floor(getRnd(6, 10, 45)) }
                 };
             }, [studentInfo.name]);
 
+            // محرك التصحيح السري (الدرجة لا تظهر للطالب)
             const calculateResults = () => {
                 const f = (x) => Math.sqrt(x + 1);
                 const { a, b } = assignment.q1;
@@ -100,21 +120,16 @@
                 else if (Math.abs(v3 - g4) < 0.2) score += 2.0;
                 else score += 1.0;
 
-                return { grade: Math.min(score, 10).toFixed(2), model: { q1: `T:${trap.toFixed(2)}, S:${simp.toFixed(2)}, G:${g3.toFixed(2)}`, q2: area.toFixed(2), q3: g4.toFixed(2) } };
+                return { 
+                    grade: Math.min(score, 10).toFixed(2), 
+                    model: { q1: `T:${trap.toFixed(2)}, S:${simp.toFixed(2)}, G:${g3.toFixed(2)}`, q2: area.toFixed(2), q3: g4.toFixed(2) } 
+                };
             };
 
-            const handleFile = (e) => {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = () => setPdfBase64(reader.result.split(',')[1]);
-                reader.readAsDataURL(file);
-            };
-
-            const submit = async () => {
-                if(!pdfBase64) return alert("يرجى رفع ملف PDF أولاً");
+            const submitAssignment = async () => {
+                if(!pdfBase64) return alert("يرجى رفع ملف الحل اليدوي PDF أولاً");
                 setLoading(true);
                 const results = calculateResults();
-                setStudentGrade(results.grade);
 
                 const payload = {
                     name: studentInfo.name,
@@ -128,117 +143,139 @@
 
                 try {
                     await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                    localStorage.setItem('tikrit_hw3_cache_v3', JSON.stringify({ studentInfo, ans }));
                     setStep('success');
                 } catch (e) { alert("حدث خطأ في الاتصال"); } finally { setLoading(false); }
             };
 
             return (
                 <div className="min-h-screen py-10 px-4 flex flex-col items-center">
-                    <div className="w-full max-w-2xl main-card overflow-hidden border-t-[16px] border-blue-900 transition-all no-select">
+                    <div className="w-full max-w-2xl assignment-card overflow-hidden border-t-[16px] border-blue-900 no-select">
                         
+                        {/* Header القسم العلوي */}
                         <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
                             <div className="text-right">
-                                <h1 className="text-2xl font-black text-blue-900">جامعة تكريت</h1>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase">Numerical HW No. (3)</p>
+                                <h1 className="text-xl font-black text-blue-900 leading-tight">Civil Engineering Department</h1>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tikrit University - Numerical Analysis</p>
                             </div>
-                            <div className="bg-blue-900 text-white px-4 py-1 rounded-xl font-black text-xs italic">2026</div>
+                            <div className="bg-blue-900 text-white px-3 py-1 rounded-xl font-black text-xs uppercase italic">HW3 Portal</div>
                         </div>
 
                         {step === 'register' && (
                             <div className="p-10 text-right">
-                                <h2 className="text-xl font-black mb-8 border-r-8 border-blue-600 pr-3">بيانات الطالب</h2>
-                                <input type="text" placeholder="الاسم الثلاثي باللغة العربية" className="w-full p-4 border-2 rounded-3xl mb-4 outline-none focus:border-blue-900 shadow-sm" onChange={e => setStudentInfo({...studentInfo, name: e.target.value})} />
-                                <select className="w-full p-4 border-2 rounded-3xl mb-10 bg-white font-bold outline-none" onChange={e => setStudentInfo({...studentInfo, studyType: e.target.value})}>
-                                    <option>صباحي A</option><option>صباحي B</option><option>صباحي C</option><option>فصلي</option><option>مسائي</option>
-                                </select>
-                                <button onClick={() => studentInfo.name.length > 5 ? setStep('q1') : alert("الاسم مطلوب")} className="w-full bg-blue-900 text-white font-black py-5 rounded-3xl shadow-xl hover:bg-blue-800 transition-all text-xl">ابدأ الواجب</button>
-                            </div>
-                        )}
-
-                        {step === 'q1' && (
-                            <div className="p-8 text-right">
-                                <div className="bg-blue-50 p-8 rounded-[2.5rem] border-r-8 border-blue-900 mb-8 text-center shadow-inner">
-                                    <p className="text-right text-sm font-bold text-slate-700 mb-4">Q1: Evaluate the following integral:</p>
-                                    <div className="text-2xl my-6 text-blue-900 overflow-x-auto">
-                                        {"\\[ \\int_{" + assignment.q1.a + "}^{" + assignment.q1.b + "} \\sqrt{x+1} \\, dx \\]"}
+                                {isReturning && <div className="bg-blue-50 text-blue-700 p-4 rounded-3xl mb-8 text-xs font-bold border border-blue-100 flex items-center gap-2">أهلاً بك مجدداً، يمكنك مراجعة وتعديل حلك السابق.</div>}
+                                <h2 className="text-xl font-black mb-8 border-r-8 border-blue-600 pr-3 text-slate-800">بيانات الطالب</h2>
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-400 mb-2 mr-1">الاسم الثلاثي (باللغة العربية):</label>
+                                        <input type="text" placeholder="اكتب اسمك كما في القائمة..." className="w-full p-4 border-2 rounded-3xl mb-4 outline-none focus:border-blue-900 shadow-sm" onChange={e => setStudentInfo({...studentInfo, name: e.target.value})} value={studentInfo.name} />
                                     </div>
-                                    <p className="text-[10px] font-black text-slate-400">using: a) Trap (n=4), b) Simp (n=4), c) Gauss (n=3)</p>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-400 mb-2 mr-1">نوع الدراسة:</label>
+                                        <select className="w-full p-4 border-2 rounded-3xl mb-10 bg-white font-bold outline-none" onChange={e => setStudentInfo({...studentInfo, studyType: e.target.value})} value={studentInfo.studyType}>
+                                            <option>صباحي A</option><option>صباحي B</option><option>صباحي C</option><option>فصلي</option><option>مسائي</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div className="space-y-4">
-                                    <input type="number" step="any" placeholder="Trap Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono" onChange={e => setAns({...ans, q1t: e.target.value})} value={ans.q1t||''} />
-                                    <input type="number" step="any" placeholder="Simp Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono" onChange={e => setAns({...ans, q1s: e.target.value})} value={ans.q1s||''} />
-                                    <input type="number" step="any" placeholder="Gauss Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono" onChange={e => setAns({...ans, q1g: e.target.value})} value={ans.q1g||''} />
-                                </div>
-                                <button onClick={() => setStep('q2')} className="w-full mt-10 bg-blue-900 text-white py-4 rounded-3xl font-black shadow-lg">التالي</button>
+                                <button onClick={() => studentInfo.name.trim().split(/\s+/).length >= 3 ? setStep('q1') : alert("يرجى إدخال اسمك الثلاثي كاملاً")} className="w-full bg-blue-900 text-white font-black py-5 rounded-3xl shadow-xl hover:bg-blue-800 transition-all text-xl">دخول للواجب</button>
                             </div>
                         )}
 
-                        {step === 'q2' && (
-                            <div className="p-8 text-right">
-                                <div className="bg-blue-50 p-6 rounded-[2rem] border-r-8 border-blue-900 mb-6 font-bold text-sm leading-relaxed">
-                                    Q2: Find the area (Simpson's Rule, h = {assignment.q2.h}):
+                        {step === 'q1' && (assignment) && (
+                            <div className="p-8 text-left" dir="ltr">
+                                <button onClick={() => setStep('register')} className="text-blue-600 text-xs font-bold mb-6 flex items-center gap-1 hover:underline">← Edit Student Info</button>
+                                <p className="font-bold text-slate-800 mb-2">Q1: Evaluate</p>
+                                <div className="math-display">
+                                    {"\\[ \\int_{" + assignment.q1.a + "}^{" + assignment.q1.b + "} \\sqrt{x+1} \\, dx \\]"}
                                 </div>
-                                <div className="overflow-x-auto mb-6 rounded-2xl border shadow-inner">
+                                <p className="font-bold mb-8 text-sm text-slate-600">using: a.) Trapezoidal Method (n=4), b.) Simpson's Rule (n=4) and c.) Gauss-Quadrature (n=3)</p>
+                                <div className="space-y-4" dir="rtl">
+                                    <input type="number" step="any" placeholder="a.) Trapezoidal Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono focus:border-blue-500" onChange={e => setAns({...ans, q1t: e.target.value})} value={ans.q1t || ''} />
+                                    <input type="number" step="any" placeholder="b.) Simpson's Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono focus:border-blue-500" onChange={e => setAns({...ans, q1s: e.target.value})} value={ans.q1s || ''} />
+                                    <input type="number" step="any" placeholder="c.) Gauss-Quadrature Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono focus:border-blue-500" onChange={e => setAns({...ans, q1g: e.target.value})} value={ans.q1g || ''} />
+                                </div>
+                                <button onClick={() => (ans.q1t && ans.q1s && ans.q1g) ? setStep('q2') : alert("Please fill all answers")} className="w-full mt-10 bg-blue-900 text-white py-4 rounded-3xl font-black shadow-lg">Next Question</button>
+                            </div>
+                        )}
+
+                        {step === 'q2' && (assignment) && (
+                            <div className="p-8 text-left" dir="ltr">
+                                <p className="font-bold text-slate-800 mb-4 tracking-tighter">Q2: Find the area enclosed by the following points using: Simpson's Rule</p>
+                                <div className="overflow-x-auto mb-8 rounded-2xl border shadow-inner bg-slate-50">
                                     <table className="w-full text-center text-[10px] font-mono">
-                                        <tr className="bg-blue-900 text-white font-bold"><td className="p-2">X</td>{[0,1,2,3,4,5,6,7,8].map(i => <td key={i}>{i * assignment.q2.h}</td>)}</tr>
-                                        <tr><td className="p-2 font-bold bg-slate-100">f(x)</td>{assignment.q2.y.map((v, i) => <td key={i}>{v}</td>)}</tr>
+                                        <tr className="bg-blue-900 text-white font-bold"><td className="p-2 border-b border-blue-800">X</td>{[0,1,2,3,4,5,6,7,8].map(i => <td key={i} className="border-b border-blue-800">{i * assignment.q2.h}</td>)}</tr>
+                                        <tr><td className="p-2 font-bold bg-white border-b">$f(x)$</td>{assignment.q2.y.map((v, i) => <td key={i} className="border-b">{v}</td>)}</tr>
                                     </table>
                                 </div>
-                                <input type="number" step="any" placeholder="Area Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono" onChange={e => setAns({...ans, q2: e.target.value})} value={ans.q2||''} />
-                                <div className="flex gap-4 mt-8">
-                                    <button onClick={() => setStep('q1')} className="flex-1 bg-slate-100 py-4 rounded-2xl font-black text-slate-400">السابق</button>
-                                    <button onClick={() => setStep('q3')} className="flex-[2] bg-blue-900 text-white py-4 rounded-2xl font-black shadow-lg">التالي</button>
+                                <div dir="rtl">
+                                    <input type="number" step="any" placeholder="Area Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono focus:border-blue-500" onChange={e => setAns({...ans, q2: e.target.value})} value={ans.q2 || ''} />
+                                </div>
+                                <div className="flex gap-4 mt-12">
+                                    <button onClick={() => setStep('q1')} className="flex-1 bg-slate-100 py-4 rounded-3xl font-bold text-slate-500">Back</button>
+                                    <button onClick={() => ans.q2 ? setStep('q3') : alert("Please fill the answer")} className="flex-[2] bg-blue-900 text-white py-4 rounded-3xl font-black shadow-lg">Next</button>
                                 </div>
                             </div>
                         )}
 
-                        {step === 'q3' && (
-                            <div className="p-8 text-right">
-                                <div className="bg-blue-50 p-8 rounded-[2.5rem] border-r-8 border-blue-900 mb-8 shadow-inner text-center">
-                                    <p className="text-right text-sm font-bold text-slate-700 mb-4">Q3: Evaluate using Gauss (n=4):</p>
-                                    <div className="text-2xl my-6 text-blue-900">
-                                        {"\\[ \\int_{" + assignment.q3.a + "}^{" + assignment.q3.b + "} \\sqrt{1+x} \\, dx \\]"}
-                                    </div>
+                        {step === 'q3' && (assignment) && (
+                            <div className="p-8 text-left" dir="ltr">
+                                <p className="font-bold text-slate-800 mb-2 tracking-tighter">Q3: Evaluate</p>
+                                <div className="math-display">
+                                    {"\\[ \\int_{" + assignment.q3.a + "}^{" + assignment.q3.b + "} \\sqrt{1+x} \\, dx \\]"}
                                 </div>
-                                <input type="number" step="any" placeholder="Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono" onChange={e => setAns({...ans, q3: e.target.value})} value={ans.q3||''} />
-                                <div className="flex gap-4 mt-10">
-                                    <button onClick={() => setStep('q2')} className="flex-1 bg-slate-100 py-4 rounded-2xl font-black text-slate-400">السابق</button>
-                                    <button onClick={() => setStep('submit')} className="flex-[2] bg-blue-900 text-white py-4 rounded-2xl font-black shadow-lg">للرفع</button>
+                                <p className="font-bold mb-10 text-sm text-slate-600 italic">using Gauss-Quadrature formula (n=4).</p>
+                                <div dir="rtl">
+                                    <input type="number" step="any" placeholder="Final Result" className="w-full p-4 border-2 rounded-2xl text-center font-mono focus:border-blue-500" onChange={e => setAns({...ans, q3: e.target.value})} value={ans.q3 || ''} />
+                                </div>
+                                <div className="flex gap-4 mt-12">
+                                    <button onClick={() => setStep('q2')} className="flex-1 bg-slate-100 py-4 rounded-3xl font-bold text-slate-500">Back</button>
+                                    <button onClick={() => ans.q3 ? setStep('submit') : alert("Please fill the answer")} className="flex-[2] bg-blue-900 text-white py-4 rounded-3xl font-black shadow-lg">Next to Upload</button>
                                 </div>
                             </div>
                         )}
 
                         {step === 'submit' && (
                             <div className="p-10 text-center">
-                                <h3 className="text-xl font-black mb-8 text-blue-900">رفع حل PDF</h3>
-                                <div className="border-4 border-dashed p-14 rounded-[4rem] bg-slate-50 mb-10 flex flex-col items-center">
-                                    <input type="file" accept="application/pdf" id="pdf" className="hidden" onChange={handleFile} />
+                                <h3 className="text-xl font-black mb-10 text-blue-900 underline underline-offset-8 decoration-blue-100">مرحلة الرفع: ارفق ملف الحل PDF</h3>
+                                <div className="border-4 border-dashed p-14 rounded-[3.5rem] bg-slate-50 mb-10 border-blue-50 flex flex-col items-center group hover:border-blue-300 transition-colors cursor-pointer">
+                                    <input type="file" accept="application/pdf" id="pdf" className="hidden" onChange={e => {
+                                        const file = e.target.files[0];
+                                        const reader = new FileReader();
+                                        reader.onload = () => setPdfBase64(reader.result.split(',')[1]);
+                                        reader.readAsDataURL(file);
+                                    }} />
                                     <label htmlFor="pdf" className="cursor-pointer">
-                                        <div className="text-7xl mb-4">📄</div>
-                                        <p className="font-black text-slate-600 mb-2">{pdfBase64 ? "✅ تم الاختيار" : "اضغط لاختيار ملف PDF"}</p>
+                                        <div className="text-7xl mb-4 group-hover:scale-110 transition-transform">📄</div>
+                                        <p className="font-black text-slate-600 mb-2">{pdfBase64 ? "✅ تم اختيار الملف" : "اضغط لاختيار ملف PDF"}</p>
+                                        <p className="text-[10px] text-slate-400 font-bold italic italic">يجب رفع حل الأسئلة يدوياً (إلزامي)</p>
                                     </label>
                                 </div>
                                 <div className="flex gap-4">
                                     <button onClick={() => setStep('q3')} className="flex-1 bg-slate-100 py-5 rounded-3xl font-bold text-slate-400">رجوع</button>
-                                    <button onClick={submit} disabled={loading || !pdfBase64} className="flex-[2] bg-green-600 text-white py-5 rounded-3xl font-black text-2xl shadow-xl disabled:opacity-30">
-                                        {loading ? "جاري الإرسال..." : "تأكيد التسليم"}
+                                    <button onClick={submitAssignment} disabled={loading || !pdfBase64} className="flex-[2] bg-green-600 text-white py-5 rounded-3xl font-black text-2xl shadow-xl disabled:opacity-30">
+                                        {loading ? "جاري الإرسال..." : "تأكيد التسليم النهائي"}
                                     </button>
                                 </div>
+                                {!pdfBase64 && <p className="text-[10px] text-red-500 font-bold mt-4 tracking-tighter">* لا يمكن التسليم بدون إرفاق ملف PDF</p>}
                             </div>
                         )}
 
                         {step === 'success' && (
                             <div className="p-20 text-center bg-white shadow-inner">
                                 <div className="text-8xl mb-8">🎓</div>
-                                <h2 className="text-4xl font-black mb-6 text-blue-900 tracking-tight">تم التسليم بنجاح!</h2>
-                                <div className="bg-blue-50 p-8 rounded-3xl mb-10 border-2 border-blue-100 shadow-sm">
-                                    <p className="text-slate-600 font-bold mb-2">درجتك النهائية يا {studentInfo.name.split(" ")[0]}:</p>
-                                    <p className="text-6xl font-black text-blue-900">{studentGrade} / 10</p>
+                                <h2 className="text-2xl font-black mb-10 text-blue-900 leading-loose">
+                                    لقد تم استلام اجابتك بنجح يا <br/>
+                                    <span className="text-blue-700 underline underline-offset-8 decoration-2">{studentInfo.name}</span> <br/>
+                                    شكرا لك على المشاركة
+                                </h2>
+                                <div className="p-5 border-4 border-double border-blue-900 rounded-[2.5rem] text-blue-900 font-black text-sm inline-block tracking-tight">جامعة تكريت - قسم الهندسة المدنية</div>
+                                <div className="mt-10">
+                                    <button onClick={() => setStep('register')} className="text-xs text-slate-400 font-bold hover:text-blue-900 transition-colors border-b border-transparent hover:border-blue-900 pb-1">هل تريد مراجعة حلك؟ العودة لتعديل البيانات</button>
                                 </div>
-                                <div className="p-5 border-4 border-double border-blue-900 rounded-[2.5rem] text-blue-900 font-black text-sm inline-block">قسم الهندسة المدنية</div>
                             </div>
                         )}
                     </div>
+                    <div className="mt-8 text-center text-slate-400 text-[8px] font-bold uppercase tracking-widest italic select-none">Numerical Analysis HW3 Portal - Tikrit 2026</div>
                 </div>
             );
         }
