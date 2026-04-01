@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" translate="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>واجب التحليلات العددية - جامعة تكريت</title>
     
-    <!-- تحميل المكتبات الأساسية - تم استخدام روابط موثوقة -->
+    <!-- تحميل المكتبات بروابط مباشرة ومستقرة -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -17,82 +17,65 @@
         body { 
             font-family: 'Tajawal', sans-serif; 
             margin: 0;
-            background-color: #f3f4f6;
+            background-color: #f8fafc;
         }
-        .ltr { direction: ltr; text-align: left; }
-        #loading-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 9999;
-        }
-        .spinner {
-            width: 40px; height: 40px; border: 4px solid #f3f3f3;
-            border-top: 4px solid #2563eb; border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .math-container { direction: ltr; font-family: serif; font-size: 1.25rem; }
+        .ltr-input { direction: ltr; text-align: left; font-family: monospace; }
+        
+        /* تحسينات الواجهة */
+        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body>
-    <!-- شاشة التحميل تظهر حتى يعمل React -->
-    <div id="loading-screen">
-        <div class="spinner"></div>
-        <p style="margin-top: 15px; color: #4b5563; font-weight: bold;">جاري تحميل الواجب...</p>
-    </div>
-
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useCallback } = React;
 
-        // مكوّن الأيقونات المعدل لتجنب الأخطاء
-        const LucideIcon = ({ name, className = "" }) => {
+        // مكوّن الأيقونات المستقر
+        const Icon = ({ name, className = "" }) => {
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
             }, [name]);
-            return <i data-lucide={name} className={className}></i>;
+            return <i data-lucide={name} className={className} style={{width: '1em', height: '1em'}}></i>;
         };
 
-        // الدوال الحسابية
+        // الدوال الرياضية
         const f1 = (x) => Math.sqrt(x + 1);
         const f3 = (x) => Math.sqrt(1 + x);
 
-        const trapezoidal = (a, b, n) => {
-            const h = (b - a) / n;
-            let sum = f1(a) + f1(b);
-            for (let i = 1; i < n; i++) sum += 2 * f1(a + i * h);
-            return (h / 2) * sum;
-        };
-
-        const simpson = (a, b, n) => {
-            const h = (b - a) / n;
-            let sum = f1(a) + f1(b);
-            for (let i = 1; i < n; i++) sum += (i % 2 === 0 ? 2 : 4) * f1(a + i * h);
-            return (h / 3) * sum;
-        };
-
-        const simpsonTable = (h, yValues) => {
-            let sum = yValues[0] + yValues[yValues.length - 1];
-            for (let i = 1; i < yValues.length - 1; i++) sum += (i % 2 === 0 ? 2 : 4) * yValues[i];
-            return (h / 3) * sum;
-        };
-
-        const gauss3 = (a, b) => {
-            const nodes = [-0.774596, 0, 0.774596];
-            const weights = [0.555555, 0.888888, 0.555555];
-            let sum = 0;
-            const trans = (t) => ((b - a) / 2) * t + (b + a) / 2;
-            for (let i = 0; i < 3; i++) sum += weights[i] * f1(trans(nodes[i]));
-            return ((b - a) / 2) * sum;
-        };
-
-        const gauss4 = (a, b) => {
-            const nodes = [-0.861136, -0.339981, 0.339981, 0.861136];
-            const weights = [0.347855, 0.652145, 0.652145, 0.347855];
-            let sum = 0;
-            const trans = (t) => ((b - a) / 2) * t + (b + a) / 2;
-            for (let i = 0; i < 4; i++) sum += weights[i] * f3(trans(nodes[i]));
-            return ((b - a) / 2) * sum;
+        const numericalMethods = {
+            trapezoidal: (a, b, n) => {
+                const h = (b - a) / n;
+                let sum = f1(a) + f1(b);
+                for (let i = 1; i < n; i++) sum += 2 * f1(a + i * h);
+                return (h / 2) * sum;
+            },
+            simpson: (a, b, n) => {
+                const h = (b - a) / n;
+                let sum = f1(a) + f1(b);
+                for (let i = 1; i < n; i++) sum += (i % 2 === 0 ? 2 : 4) * f1(a + i * h);
+                return (h / 3) * sum;
+            },
+            simpsonTable: (h, y) => {
+                let sum = y[0] + y[y.length - 1];
+                for (let i = 1; i < y.length - 1; i++) sum += (i % 2 === 0 ? 2 : 4) * y[i];
+                return (h / 3) * sum;
+            },
+            gauss3: (a, b) => {
+                const n = [-0.774596, 0, 0.774596], w = [0.555555, 0.888888, 0.555555];
+                let s = 0; const tr = (t) => ((b - a) / 2) * t + (b + a) / 2;
+                for (let i = 0; i < 3; i++) s += w[i] * f1(tr(n[i]));
+                return ((b - a) / 2) * s;
+            },
+            gauss4: (a, b) => {
+                const n = [-0.861136, -0.339981, 0.339981, 0.861136], w = [0.347855, 0.652145, 0.652145, 0.347855];
+                let s = 0; const tr = (t) => ((b - a) / 2) * t + (b + a) / 2;
+                for (let i = 0; i < 4; i++) s += w[i] * f3(tr(n[i]));
+                return ((b - a) / 2) * s;
+            }
         };
 
         function App() {
@@ -104,12 +87,9 @@
             const [loading, setLoading] = useState(false);
             const [assignmentData, setAssignmentData] = useState(null);
 
-            // إخفاء شاشة التحميل عند البدء
+            // إعداد البيانات العشوائية وتثبيتها
             useEffect(() => {
-                const loader = document.getElementById('loading-screen');
-                if (loader) loader.style.display = 'none';
-
-                const saved = localStorage.getItem('hw3_v2_data');
+                const saved = localStorage.getItem('hw3_vfinal_data');
                 if (saved) {
                     setAssignmentData(JSON.parse(saved));
                 } else {
@@ -118,41 +98,45 @@
                     const a3 = Math.floor(Math.random() * 3) + 2;
                     const b3 = a3 + 6;
                     const x2 = Array.from({length: 7}, (_, i) => 3 + (i * 3));
-                    const y2 = Array.from({length: 7}, () => (Math.random() * 15 + 2).toFixed(1)).map(Number);
+                    const y2 = Array.from({length: 7}, () => parseFloat((Math.random() * 15 + 2).toFixed(1)));
                     const data = { a1, b1, a3, b3, x2, y2, h2: 3 };
-                    localStorage.setItem('hw3_v2_data', JSON.stringify(data));
+                    localStorage.setItem('hw3_vfinal_data', JSON.stringify(data));
                     setAssignmentData(data);
                 }
             }, []);
 
             const grades = useMemo(() => {
                 if (!assignmentData) return {};
-                const c1a = trapezoidal(assignmentData.a1, assignmentData.b1, 4);
-                const c1b = simpson(assignmentData.a1, assignmentData.b1, 4);
-                const c1c = gauss3(assignmentData.a1, assignmentData.b1);
-                const c2 = simpsonTable(assignmentData.h2, assignmentData.y2);
-                const c3 = gauss4(assignmentData.a3, assignmentData.b3);
+                const c1a = numericalMethods.trapezoidal(assignmentData.a1, assignmentData.b1, 4);
+                const c1b = numericalMethods.simpson(assignmentData.a1, assignmentData.b1, 4);
+                const c1c = numericalMethods.gauss3(assignmentData.a1, assignmentData.b1);
+                const c2 = numericalMethods.simpsonTable(assignmentData.h2, assignmentData.y2);
+                const c3 = numericalMethods.gauss4(assignmentData.a3, assignmentData.b3);
 
-                const chk = (s, c, m) => {
-                    const v = parseFloat(s); if (isNaN(v)) return 0.5;
-                    return Math.abs(v - c) < 0.05 ? m : (Math.abs(Math.abs(v) - Math.abs(c)) < 0.05 ? m - 0.5 : 0.5);
+                const chk = (s, c, m, type) => {
+                    const v = parseFloat(s); if (isNaN(v)) return type === 'q1' ? 0.5 : 1;
+                    if (Math.abs(v - c) < 0.05) return m;
+                    if (Math.abs(Math.abs(v) - Math.abs(c)) < 0.05) return m - 0.5;
+                    return type === 'q1' ? 0.5 : 1;
                 };
 
-                const g1a = chk(answers.q1a, c1a, 1.5);
-                const g1b = chk(answers.q1b, c1b, 1.5);
-                const g1c = chk(answers.q1c, c1c, 1.5);
-                const g2 = chk(answers.q2, c2, 2.5);
-                const g3 = chk(answers.q3, c3, 3);
+                const g1a = chk(answers.q1a, c1a, 1.5, 'q1');
+                const g1b = chk(answers.q1b, c1b, 1.5, 'q1');
+                const g1c = chk(answers.q1c, c1c, 1.5, 'q1');
+                const g2 = chk(answers.q2, c2, 2.5, 'q2');
+                const g3 = chk(answers.q3, c3, 3.0, 'q3');
+                
                 return { g1a, g1b, g1c, g2, g3, total: (g1a + g1b + g1c + g2 + g3).toFixed(2) };
             }, [answers, assignmentData]);
 
             const handleSubmit = async () => {
+                if (!pdfFile) return alert("يرجى إرفاق ملف PDF");
                 setLoading(true);
                 const reader = new FileReader();
                 reader.readAsDataURL(pdfFile);
                 reader.onload = async () => {
                     const base64 = reader.result.split(',')[1];
-                    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYfd1GjJU2431aFoE4-1R7KW1aV0B8urtocmTs774j8uCINExl5iK65k_tjYa14Oc8Kg/exec"; 
+                    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYfd1GjJU2431aFoE4-1R7KW1aV0B8urtocmTs774j8uCINExl5iK65k_tjYa14Oc8Kg/exec"; // يرجى وضع رابط Google Script الخاص بك هنا
                     const payload = { ...studentInfo, ...answers, ...grades, pdfData: base64, pdfName: pdfFile.name, date: new Date().toLocaleString('ar-EG') };
                     try {
                         await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
@@ -164,92 +148,138 @@
 
             if (isSubmitted) {
                 return (
-                    <div className="min-h-screen flex items-center justify-center p-6">
-                        <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-green-500">
-                            <LucideIcon name="check-circle" className="text-green-500 w-20 h-20 mx-auto mb-4" />
-                            <h1 className="text-2xl font-bold mb-2">تم التسليم بنجاح!</h1>
-                            <p className="text-gray-600 mb-6">لقد قمت بتسليم بنجاح ستظهر اجاباتك عند الاستاذ</p>
-                            <button onClick={() => setIsSubmitted(false)} className="text-blue-600 font-bold hover:underline">تعديل الإجابة النهائية</button>
+                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+                        <div className="bg-white p-10 rounded-[2rem] shadow-2xl max-w-md w-full text-center border-t-8 border-green-500">
+                            <div className="text-green-500 mb-4 flex justify-center"><Icon name="check-circle" className="w-20 h-20" /></div>
+                            <h1 className="text-2xl font-black mb-2">تم التسليم بنجاح!</h1>
+                            <p className="text-gray-600 mb-8 leading-relaxed">لقد قمت بتسليم بنجاح ستظهر اجاباتك عند الاستاذ</p>
+                            <button onClick={() => setIsSubmitted(false)} className="text-blue-600 font-bold hover:underline">العودة لتعديل الإجابة النهائية</button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="min-h-screen flex flex-col items-center py-10 px-4">
-                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+                <div className="min-h-screen flex flex-col items-center py-10 px-4 bg-slate-50">
+                    <div className="w-full max-w-2xl bg-white rounded-[2rem] card-shadow overflow-hidden border border-slate-100">
                         {/* Header */}
-                        <div className="bg-blue-600 p-6 text-white text-center">
-                            <h1 className="text-xl font-bold">جامعة تكريت - كلية الهندسة</h1>
-                            <p className="text-sm opacity-80">التحليلات العددية | الواجب البيتي رقم (3)</p>
+                        <div className="bg-blue-700 p-8 text-white relative">
+                            <div className="relative z-10 flex flex-col items-center">
+                                <Icon name="graduation-cap" className="w-12 h-12 mb-3" />
+                                <h1 className="text-xl font-black">جامعة تكريت - كلية الهندسة</h1>
+                                <p className="text-sm opacity-90 font-bold mt-1">قسم الهندسة المدنية | التحليلات العددية</p>
+                            </div>
+                            <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
                         </div>
 
-                        {/* Progress */}
-                        <div className="w-full bg-gray-100 h-1.5 flex">
+                        {/* Progress Bar */}
+                        <div className="flex w-full bg-slate-100 h-2">
                             {[...Array(7)].map((_, i) => (
-                                <div key={i} className={`flex-1 transition-all ${i <= step ? 'bg-blue-500' : ''}`} />
+                                <div key={i} className={`flex-1 transition-all duration-700 ${i <= step ? 'bg-blue-600' : ''}`} />
                             ))}
                         </div>
 
-                        <div className="p-8">
+                        <div className="p-8 md:p-10">
                             {step === 0 && (
-                                <div className="space-y-6">
-                                    <h2 className="text-xl font-bold text-center text-blue-900 underline decoration-blue-200 underline-offset-8">بيانات الطالب</h2>
-                                    <input type="text" placeholder="الاسم الثلاثي بالعربي" className="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500" value={studentInfo.name} onChange={e => setStudentInfo({...studentInfo, name: e.target.value})} />
-                                    <select className="w-full p-4 border rounded-2xl outline-none" value={studentInfo.studyType} onChange={e => setStudentInfo({...studentInfo, studyType: e.target.value})}>
-                                        <option value="">نوع الدراسة</option>
-                                        <option>صباحي A</option><option>صباحي B</option><option>صباحي C</option><option>فصلي</option><option>مسائي</option>
-                                    </select>
-                                    <div className="bg-amber-50 p-4 rounded-2xl border-r-4 border-amber-400 text-sm text-amber-800">قم بكتابة اسمك على جميع صفحات الحل اليدوي قبل ارساله</div>
+                                <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                                    <h2 className="text-2xl font-black text-center text-slate-800 mb-8 underline decoration-blue-200 underline-offset-8">الواجب البيتي رقم (3)</h2>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-600 mb-2 mr-1">الاسم الثلاثي باللغة العربية:</label>
+                                            <input type="text" placeholder="مثال: أحمد محمد علي" className="w-full p-4 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all" value={studentInfo.name} onChange={e => setStudentInfo({...studentInfo, name: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-600 mb-2 mr-1">نوع الدراسة:</label>
+                                            <select className="w-full p-4 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-500 transition-all appearance-none bg-no-repeat bg-left" value={studentInfo.studyType} onChange={e => setStudentInfo({...studentInfo, studyType: e.target.value})}>
+                                                <option value="">اختر نوع الدراسة...</option>
+                                                <option>صباحي A</option><option>صباحي B</option><option>صباحي C</option><option>فصلي</option><option>مسائي</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="bg-amber-50 p-5 rounded-2xl border-r-8 border-amber-400 text-sm text-amber-900 font-bold leading-relaxed">
+                                        ملاحظة: قم بكتابة اسمك على جميع صفحات الحل اليدوي قبل ارساله.
+                                    </div>
                                 </div>
                             )}
 
                             {assignmentData && step >= 1 && step <= 5 && (
-                                <div className="space-y-6">
-                                    <h3 className="font-bold text-blue-800 text-lg">السؤال {step <= 3 ? '1' : step === 4 ? '2' : '3'}</h3>
-                                    <div className="bg-slate-50 p-6 rounded-2xl border text-center font-serif text-lg">
-                                        {step === 1 && `Integrate sqrt(x+1) from ${assignmentData.a1} to ${assignmentData.b1} (Trapezoidal n=4)`}
-                                        {step === 2 && `Integrate sqrt(x+1) from ${assignmentData.a1} to ${assignmentData.b1} (Simpson n=4)`}
-                                        {step === 3 && `Integrate sqrt(x+1) from ${assignmentData.a1} to ${assignmentData.b1} (Gauss n=3)`}
-                                        {step === 4 && (
-                                            <div className="overflow-x-auto text-xs font-sans">
-                                                <table className="w-full border">
-                                                    <tr className="bg-white border"><td>X</td>{assignmentData.x2.map(v => <td key={v} className="border p-1">{v}</td>)}</tr>
-                                                    <tr className="bg-white border"><td>f(x)</td>{assignmentData.y2.map((v, i) => <td key={i} className="border p-1">{v}</td>)}</tr>
-                                                </table>
-                                                <p className="mt-2">احسب المساحة (Simpson)</p>
+                                <div className="space-y-8 animate-in slide-in-from-left-6 duration-500">
+                                    <div className="flex justify-between items-center bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                                        <h3 className="font-black text-blue-900">السؤال {step <= 3 ? 'الأول' : step === 4 ? 'الثاني' : 'الثالث'}</h3>
+                                        <span className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full font-black uppercase tracking-wider">
+                                            {step === 1 ? 'Trapezoidal' : step === 2 ? 'Simpson' : step === 3 ? 'Gauss n=3' : step === 4 ? 'Simpson Table' : 'Gauss n=4'}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="bg-slate-50 p-8 rounded-[2rem] border-2 border-dashed border-slate-200 text-center flex flex-col items-center gap-4">
+                                        {step <= 3 && (
+                                            <div className="math-container font-serif">
+                                                ∫<sub>{assignmentData.a1}</sub><sup>{assignmentData.b1}</sup> √(x+1) dx
                                             </div>
                                         )}
-                                        {step === 5 && `Integrate sqrt(1+x) from ${assignmentData.a3} to ${assignmentData.b3} (Gauss n=4)`}
+                                        {step === 4 && (
+                                            <div className="w-full overflow-x-auto rounded-xl">
+                                                <table className="w-full text-xs font-sans border-collapse border border-slate-300 bg-white">
+                                                    <tr className="bg-slate-100"><th className="border p-2">X</th>{assignmentData.x2.map(v => <td key={v} className="border p-2 font-bold">{v}</td>)}</tr>
+                                                    <tr><th className="border p-2">f(x)</th>{assignmentData.y2.map((v, i) => <td key={i} className="border p-2">{v}</td>)}</tr>
+                                                </table>
+                                            </div>
+                                        )}
+                                        {step === 5 && (
+                                            <div className="math-container font-serif">
+                                                ∫<sub>{assignmentData.a3}</sub><sup>{assignmentData.b3}</sup> √(1+x) dx
+                                            </div>
+                                        )}
+                                        <p className="text-slate-500 text-sm font-bold mt-2">باستخدام طريقة {step === 1 ? 'Trapezoidal (n=4)' : step === 2 ? 'Simpson (n=4)' : step === 3 ? 'Gauss (n=3)' : step === 4 ? 'Simpson Table' : 'Gauss (n=4)'}</p>
                                     </div>
-                                    <input type="number" step="any" placeholder="النتيجة النهائية" className="w-full p-4 border rounded-2xl ltr font-mono text-xl" 
-                                        value={step === 1 ? answers.q1a : step === 2 ? answers.q1b : step === 3 ? answers.q1c : step === 4 ? answers.q2 : answers.q3}
-                                        onChange={e => setAnswers({...answers, [step === 1 ? 'q1a' : step === 2 ? 'q1b' : step === 3 ? 'q1c' : step === 4 ? 'q2' : 'q3']: e.target.value})} />
+
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-bold text-slate-600 mr-1">النتيجة النهائية (رقم):</label>
+                                        <input type="number" step="any" placeholder="0.0000" className="w-full p-5 border-2 border-slate-100 rounded-2xl ltr-input text-2xl focus:border-blue-500 outline-none transition-all shadow-inner bg-slate-50/50" 
+                                            value={step === 1 ? answers.q1a : step === 2 ? answers.q1b : step === 3 ? answers.q1c : step === 4 ? answers.q2 : answers.q3}
+                                            onChange={e => setAnswers({...answers, [step === 1 ? 'q1a' : step === 2 ? 'q1b' : step === 3 ? 'q1c' : step === 4 ? 'q2' : 'q3']: e.target.value})} />
+                                    </div>
                                 </div>
                             )}
 
                             {step === 6 && (
-                                <div className="space-y-6 text-center">
-                                    <h3 className="font-bold text-lg text-gray-800">إرفاق الحل اليدوي (PDF)</h3>
-                                    <div className={`border-4 border-dashed p-10 rounded-3xl transition-all relative ${pdfFile ? 'border-green-400 bg-green-50' : 'border-blue-200 bg-blue-50'}`}>
-                                        <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setPdfFile(e.target.files[0])} />
-                                        {pdfFile ? <><LucideIcon name="file-check" className="w-12 h-12 text-green-500 mx-auto" /><p className="font-bold mt-2">{pdfFile.name}</p></> : <p className="text-blue-500 font-bold">اضغط لرفع ملف PDF للحلول</p>}
+                                <div className="space-y-8 animate-in zoom-in-95 duration-500 text-center">
+                                    <h3 className="text-xl font-black text-slate-800">إرفاق ملف الحل اليدوي (PDF)</h3>
+                                    <div className={`group relative border-4 border-dashed p-12 rounded-[2.5rem] transition-all cursor-pointer ${pdfFile ? 'border-green-400 bg-green-50' : 'border-slate-200 bg-slate-50 hover:border-blue-400 hover:bg-blue-50'}`}>
+                                        <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={e => setPdfFile(e.target.files[0])} />
+                                        {pdfFile ? (
+                                            <div className="flex flex-col items-center gap-3">
+                                                <Icon name="file-check" className="w-16 h-16 text-green-500" />
+                                                <p className="font-black text-green-900 text-lg">{pdfFile.name}</p>
+                                                <span className="text-xs text-green-600 font-bold">{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-3 text-slate-400 group-hover:text-blue-500">
+                                                <Icon name="upload-cloud" className="w-16 h-16" />
+                                                <p className="font-black text-lg">اضغط هنا لرفع ملف الحلول</p>
+                                                <p className="text-xs">يجب أن يكون الملف بصيغة PDF فقط</p>
+                                            </div>
+                                        )}
                                     </div>
-                                    <p className="text-[10px] text-gray-400">ارفق ملف واحد فقط بصيغة pdf لجميع الحلول على ان لا يتجاوز حجم الملف ٨ ميكابايت</p>
+                                    <p className="text-[10px] text-slate-400 font-bold leading-relaxed px-10">ارفق ملف واحد فقط بصيغة pdf لجميع الحلول على ان لا يتجاوز حجم الملف ٨ ميكابايت</p>
                                 </div>
                             )}
                         </div>
 
-                        {/* Footer Buttons */}
-                        <div className="p-6 bg-gray-50 border-t flex justify-between gap-4">
-                            {step > 0 && <button onClick={() => setStep(step - 1)} className="px-6 py-3 border bg-white rounded-xl font-bold text-gray-600 flex items-center gap-2"><LucideIcon name="chevron-right" className="rotate-180" /> السابق</button>}
+                        {/* Navigation Footer */}
+                        <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-between gap-4">
+                            {step > 0 && (
+                                <button onClick={() => setStep(step - 1)} className="px-6 py-4 border-2 border-slate-200 bg-white rounded-2xl font-black text-slate-600 flex items-center gap-2 hover:bg-slate-100 active:scale-95 transition-all">
+                                    السابق
+                                </button>
+                            )}
                             <button 
-                                disabled={loading || (step === 0 && !studentInfo.name) || (step === 6 && !pdfFile)}
+                                disabled={loading || (step === 0 && (!studentInfo.name || !studentInfo.studyType)) || (step === 6 && !pdfFile)}
                                 onClick={step === 6 ? handleSubmit : () => setStep(step + 1)}
-                                className={`flex-grow px-8 py-3 rounded-xl text-white font-bold transition-all shadow-lg flex items-center justify-center gap-2 ${step === 6 ? 'bg-green-600' : 'bg-blue-600'}`}
+                                className={`flex-grow px-8 py-4 rounded-2xl text-white font-black transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3 ${step === 6 ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'bg-blue-700 hover:bg-blue-800 shadow-blue-200'}`}
                             >
                                 {loading ? 'جاري الإرسال...' : (step === 6 ? 'تسليم الواجب النهائي' : 'التالي')}
-                                {step < 6 && <LucideIcon name="chevron-left" className="rotate-180" />}
+                                {step < 6 && <Icon name="arrow-left" className="w-5 h-5" />}
                             </button>
                         </div>
                     </div>
